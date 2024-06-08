@@ -3,7 +3,6 @@ from mininet.link import TCLink
 
 class MyTopology(Topo):
     def build(self, num_switches):
-        server = self.addHost("server")
         clients = []
         clients.append(self.addHost("h0"))
         clients.append(self.addHost("h1"))

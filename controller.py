@@ -19,7 +19,6 @@ import os
 
 
 log = core.getLogger()
-policyFile = "%s/pox/pox/misc/firewall-policies.csv" % os.environ[ 'HOME' ]
 
 ''' Add your global variables here ... '''
 
