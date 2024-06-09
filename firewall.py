@@ -3,6 +3,7 @@ import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import *
 from pox.lib.util import dpidToStr
 from pox.lib.addresses import EthAddr
+from pox.lib.addresses import IPAddr
 from collections import namedtuple
 import os
 
@@ -19,7 +20,6 @@ class Controller(EventMixin):
         log.debug("Enabling Controller Module")
 
     def _handle_ConnectionUp(self, event):
-        
         if event.dpid == 1:
             #Rule 1
             rule1 = of.ofp_flow_mod()
@@ -33,22 +33,25 @@ class Controller(EventMixin):
             rule2.match.tp_dst = 5001
             rule2.match.nw_proto = ipv4.UDP_PROTOCOL
             rule2.match.dl_type = ethernet.IP_TYPE
-            rule2.match.nw_src = EthAddr("10.0.0.1")
+            rule2.match.nw_src = IPAddr("10.0.0.1")
             rule2.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+            event.connection.send(rule2)
             #Rule 3 
             rule31 = of.ofp_flow_mod()
             rule31.match.dl_type = ethernet.IP_TYPE
-            rule31.match.nw_src = EthAddr("10.0.0.2")
-            rule31.match.nw_dst = EthAddr("10.0.0.3")
-            rule31.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
+            rule31.match.nw_src = IPAddr("10.0.0.2")
+            rule31.match.nw_dst = IPAddr("10.0.0.3")
+            #rule31.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
+            event.connection.send(rule31)
             rule32 = of.ofp_flow_mod()
             rule32.match.dl_type = ethernet.IP_TYPE
-            rule32.match.nw_src = EthAddr("10.0.0.3")
-            rule32.match.nw_dst = EthAddr("10.0.0.2")
-            rule32.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
+            rule32.match.nw_src = IPAddr("10.0.0.3")
+            rule32.match.nw_dst = IPAddr("10.0.0.2")
+            #rule32.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
+            event.connection.send(rule32)
 
 
-        log.debug("Firewall rules installed on %s", dpidToStr(event.dpid))
+            log.debug("Firewall rules installed on %s", dpidToStr(event.dpid))
 
 def launch():
     core.registerNew(Controller)

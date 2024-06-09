@@ -4,10 +4,10 @@ from mininet.link import TCLink
 class MyTopology(Topo):
     def build(self, num_switches):
         clients = []
-        clients.append(self.addHost("h0"))
-        clients.append(self.addHost("h1"))
-        clients.append(self.addHost("h2"))
-        clients.append(self.addHost("h3"))
+        clients.append(self.addHost("h0", mac="00:00:00:00:00:01"))
+        clients.append(self.addHost("h1", mac="00:00:00:00:00:02"))
+        clients.append(self.addHost("h2", mac="00:00:00:00:00:03"))
+        clients.append(self.addHost("h3", mac="00:00:00:00:00:04"))
         switches = []
         switches.append(self.addSwitch("s0"))
         for x in range(1, num_switches):
