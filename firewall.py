@@ -20,12 +20,11 @@ class Controller(EventMixin):
         log.debug("Enabling Controller Module")
 
     def _handle_ConnectionUp(self, event):
-        if event.dpid == 1:
             #Rule 1
             rule1 = of.ofp_flow_mod()
             rule1.match.tp_dst = 80
-            rule1.match.nw_proto = ipv4.UDP_PROTOCOL
-            rule1.match.dl_type = ethernet.IP_TYPE
+            rule1.match.nw_proto = ipv4.UDP_PROTOCOL #Probablemente no hace falta
+            rule1.match.dl_type = ethernet.IP_TYPE #Probablemente no hace falta
             #rule1.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
             event.connection.send(rule1)
             #Rule 2
@@ -38,15 +37,15 @@ class Controller(EventMixin):
             event.connection.send(rule2)
             #Rule 3 
             rule31 = of.ofp_flow_mod()
-            rule31.match.dl_type = ethernet.IP_TYPE
-            rule31.match.nw_src = IPAddr("10.0.0.2")
-            rule31.match.nw_dst = IPAddr("10.0.0.3")
+            rule31.match.dl_type = ethernet.IP_TYPE #Probablemente no hace falta
+            rule31.match.dl_src = EthAddr("00:00:00:00:00:02")
+            rule31.match.dl_dst = EthAddr("00:00:00:00:00:03")
             #rule31.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
             event.connection.send(rule31)
             rule32 = of.ofp_flow_mod()
-            rule32.match.dl_type = ethernet.IP_TYPE
-            rule32.match.nw_src = IPAddr("10.0.0.3")
-            rule32.match.nw_dst = IPAddr("10.0.0.2")
+            rule32.match.dl_type = ethernet.IP_TYPE #Probablemente no hace falta
+            rule32.match.dl_src = EthAddr("00:00:00:00:00:03")
+            rule32.match.dl_dst = EthAddr("00:00:00:00:00:02")
             #rule32.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
             event.connection.send(rule32)
 
