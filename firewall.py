@@ -51,6 +51,29 @@ class Controller(EventMixin):
 
 
             log.debug("Firewall rules installed on %s", dpidToStr(event.dpid))
+    
+    def _handle_PacketIn(self, event):
+        packet = event.parsed
+
+        if packet.type == ethernet.IP_TYPE:
+            ip_packet = packet.find('ipv4')
+            if ip_packet:
+                log.info("IPv4 PacketIn: src_ip=%s dst_ip=%s", ip_packet.srcip, ip_packet.dstip)
+
+                tcp_packet = packet.find('tcp')
+                if tcp_packet:
+                    log.info("TCP PacketIn: src_port=%s dst_port=%s", tcp_packet.srcport, tcp_packet.dstport)
+
+                udp_packet = packet.find('udp')    
+                if udp_packet:
+                    log.info("UDP PacketIn: src_port=%s dst_port=%s", udp_packet.srcport, udp_packet.dstport)
+
+                icmp_packet = packet.find('icmp')
+                if icmp_packet:
+                    log.info("ICMP PacketIn: icmp_type=%s icmp_code=%s", icmp_packet.type, icmp_packet.code)
+
+        msg = of.ofp_packet_out()
+        event.connection.send(msg)
 
 def launch():
     core.registerNew(Controller)
