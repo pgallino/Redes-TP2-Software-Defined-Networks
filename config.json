@@ -5,7 +5,7 @@
       "dst_port": 80
     },
     {
-      "scr_ip": "10.0.0.1",
+      "src_ip": "10.0.0.1",
       "IPv": 4,
       "dst_port": 5001,
       "protocol": "UDP"
