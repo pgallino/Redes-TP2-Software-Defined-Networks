@@ -2,55 +2,85 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import *
 from pox.lib.util import dpidToStr
-from pox.lib.addresses import EthAddr
-from pox.lib.addresses import IPAddr
+from pox.lib.addresses import EthAddr, IPAddr, IPAddr6
 from collections import namedtuple
-import os
+import json
 
 from pox.lib.packet.ethernet import ethernet
 from pox.lib.packet.ipv4 import ipv4
-from pox.lib.packet.tcp import tcp
 
 log = core.getLogger()
 
 class Controller(EventMixin):
 
-    def __init__(self):
+    def __init__(self, config):
         self.listenTo(core.openflow)
         log.debug("Enabling Controller Module")
+        self.config = config
 
     def _handle_ConnectionUp(self, event):
-            #Rule 1
-            rule1 = of.ofp_flow_mod()
-            rule1.match.tp_dst = 80
-            rule1.match.nw_proto = ipv4.UDP_PROTOCOL #Probablemente no hace falta
-            rule1.match.dl_type = ethernet.IP_TYPE #Probablemente no hace falta
-            #rule1.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
-            event.connection.send(rule1)
-            #Rule 2
-            rule2 = of.ofp_flow_mod()
-            rule2.match.tp_dst = 5001
-            rule2.match.nw_proto = ipv4.UDP_PROTOCOL
-            rule2.match.dl_type = ethernet.IP_TYPE
-            rule2.match.nw_src = IPAddr("10.0.0.1")
-            #rule2.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
-            event.connection.send(rule2)
-            #Rule 3 
-            rule31 = of.ofp_flow_mod()
-            rule31.match.dl_type = ethernet.IP_TYPE #Probablemente no hace falta
-            rule31.match.dl_src = EthAddr("00:00:00:00:00:02")
-            rule31.match.dl_dst = EthAddr("00:00:00:00:00:03")
-            #rule31.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
-            event.connection.send(rule31)
-            rule32 = of.ofp_flow_mod()
-            rule32.match.dl_type = ethernet.IP_TYPE #Probablemente no hace falta
-            rule32.match.dl_src = EthAddr("00:00:00:00:00:03")
-            rule32.match.dl_dst = EthAddr("00:00:00:00:00:02")
-            #rule32.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
-            event.connection.send(rule32)
+        if event.dpid == self.config['switch']:
+            self.install_rules(event)
 
+    def install_rules(self, event):
+        for rule in self.config['rules']:
+            self.apply_rule(event, rule)
+        log.debug("Firewall rules installed on %s", dpidToStr(event.dpid))
 
-            log.debug("Firewall rules installed on %s", dpidToStr(event.dpid))
+    def apply_rule(self, event, rule):
+        if 'mutual_block' in rule:
+            self.apply_mutual_block(event, rule['mutual_block'])
+        else:
+            flow_mod = self.create_flow_mod(rule)
+            event.connection.send(flow_mod)
 
-def launch():
-    core.registerNew(Controller)
+    def create_flow_mod(self, rule):
+        flow_mod = of.ofp_flow_mod()
+        
+        if 'dst_port' in rule:
+            flow_mod.match.tp_dst = rule['dst_port']
+        
+        if 'src_ip' in rule:
+            self.set_ip_address(flow_mod, rule)
+        
+        if 'IPv' in rule:
+            self.set_ip_type(flow_mod, rule['IPv'])
+        
+        if 'protocol' in rule:
+            self.set_protocol(flow_mod, rule['protocol'])
+        
+        return flow_mod
+
+    def set_ip_address(self, flow_mod, rule):
+        if rule['IPv'] == 6:
+            flow_mod.match.nw_src = IPAddr6(rule['src_ip'])
+        else:
+            flow_mod.match.nw_src = IPAddr(rule['src_ip'])
+
+    def set_ip_type(self, flow_mod, ip_version):
+        if ip_version == 6:
+            flow_mod.match.dl_type = ethernet.IPV6_TYPE
+        elif ip_version == 4:
+            flow_mod.match.dl_type = ethernet.IP_TYPE
+
+    def set_protocol(self, flow_mod, protocol):
+        if protocol == 'UDP':
+            flow_mod.match.nw_proto = ipv4.UDP_PROTOCOL
+        elif protocol == 'TCP':
+            flow_mod.match.nw_proto = ipv4.TCP_PROTOCOL
+
+    def apply_mutual_block(self, event, addresses):
+        addr1, addr2 = addresses
+        self.send_block_rule(event, addr1, addr2)
+        self.send_block_rule(event, addr2, addr1)
+
+    def send_block_rule(self, event, src, dst):
+        flow_mod = of.ofp_flow_mod()
+        flow_mod.match.dl_src = EthAddr(src)
+        flow_mod.match.dl_dst = EthAddr(dst)
+        event.connection.send(flow_mod)
+
+def launch(config_file="config.json"):
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+    core.registerNew(Controller, config)
