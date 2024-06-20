@@ -8,8 +8,7 @@ import json
 
 from pox.lib.packet.ethernet import ethernet
 from pox.lib.packet.ipv4 import ipv4
-from pox.lib.packet.tcp import tcp
-from pox.lib.packet.udp import udp
+
 
 log = core.getLogger()
 
@@ -37,44 +36,36 @@ class Controller(EventMixin):
 
     def create_combinations_and_apply(self, event, rule):
         protocols = ['TCP', 'UDP'] if 'protocol' not in rule else [rule['protocol']]
-        ip_versions = [4, 6] if 'IPv' not in rule else [rule['IPv']]
 
         for proto in protocols:
-            for ip_version in ip_versions:
-                modified_rule = rule.copy()
-                modified_rule['protocol'] = proto
-                modified_rule['IPv'] = ip_version
-                flow_mod = self.create_flow_mod(modified_rule)
-                event.connection.send(flow_mod)
+            modified_rule = rule.copy()
+            modified_rule['protocol'] = proto
+            flow_mod = self.create_flow_mod(modified_rule)
+            event.connection.send(flow_mod)
+            
 
     def create_flow_mod(self, rule):
         flow_mod = of.ofp_flow_mod()
 
         self.set_protocol(flow_mod, rule['protocol'])
-        
-        
+        self.set_ip_type(flow_mod)
 
+        if 'src_port' in rule:
+            flow_mod.match.tp_src = rule['src_port']
+        
         if 'dst_port' in rule:
             flow_mod.match.tp_dst = rule['dst_port']
         
         if 'src_ip' in rule:
-            self.set_ip_address(flow_mod, rule)
-        
-        self.set_ip_type(flow_mod, rule['IPv'])
-
-        return flow_mod
-
-    def set_ip_address(self, flow_mod, rule):
-        if rule['IPv'] == 6:
-            flow_mod.match.nw_src = IPAddr6(rule['src_ip'])
-        else:
             flow_mod.match.nw_src = IPAddr(rule['src_ip'])
 
-    def set_ip_type(self, flow_mod, ip_version):
-        if ip_version == 6:
-            flow_mod.match.dl_type = ethernet.IPV6_TYPE
-        elif ip_version == 4:
-            flow_mod.match.dl_type = ethernet.IP_TYPE
+        if 'dst_ip' in rule:
+            flow_mod.match.nw_dst = IPAddr(rule['dst_ip'])
+        
+        return flow_mod
+
+    def set_ip_type(self, flow_mod):
+        flow_mod.match.dl_type = ethernet.IP_TYPE
 
     def set_protocol(self, flow_mod, protocol):
         if protocol == 'UDP':
