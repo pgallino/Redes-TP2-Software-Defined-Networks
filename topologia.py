@@ -9,9 +9,9 @@ class MyTopology(Topo):
         clients.append(self.addHost("h2", mac="00:00:00:00:00:03"))
         clients.append(self.addHost("h3", mac="00:00:00:00:00:04"))
         switches = []
-        switches.append(self.addSwitch("s0"))
+        switches.append(self.addSwitch("s1"))
         for x in range(1, num_switches):
-            new_switch = self.addSwitch("s" + str(x))
+            new_switch = self.addSwitch("s" + str(x + 1))
             switches.append(new_switch)
             self.addLink(switches[x-1], switches[x], cls=TCLink)
             
